@@ -150,3 +150,55 @@ legend {
 [class*=" icon-"]:not(.input-group-text) {
   margin-right: 0.5em;
 }
+
+
+// password field style
+.strength-indicator-container.show {
+  display: flex;
+}
+
+.input-container {
+  display: flex;
+  flex: 1;
+}
+
+.strength-indicator-container {
+  display: none;
+  position: absolute;
+  left: 0;
+  bottom: -10px;
+
+  .strength-indicator {
+      width: 60px;
+      height: 2px;
+      background: #fff;
+      border-radius: 3px;
+      margin: 0 5px 0 0;
+  }
+
+  .indicator-text {
+      position: absolute;
+      bottom: -35px;
+      left: 0;
+  }
+
+  .strength-indicator.very-weak {
+      background: red;
+  }
+  
+  .strength-indicator.weak {
+      background: rgb(196, 85, 85);
+  }
+  
+  .strength-indicator.good {
+      background: rgb(235, 219, 3);
+  }
+  
+  .strength-indicator.great {
+      background: rgb(107, 230, 128);
+  }
+  
+  .strength-indicator.strong {
+      background: rgb(3, 190, 34);
+  }
+}
