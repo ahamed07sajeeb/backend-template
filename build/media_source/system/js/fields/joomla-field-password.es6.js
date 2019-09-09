@@ -8,28 +8,13 @@
                 throw new Error('Joomla API is not properly initiated');
             }
             this.isPasswordField = true;
-            this.stdCharsets = [
-                {
-                    name: 'lowercase',
-                    re: /[a-z]/,
-                    length: 26
-                }, 
-                {
-                    name: 'uppercase',
-                    re: /[A-Z]/,
-                    length: 26
-                }, 
-                {
-                    name: 'numbers',
-                    re: /[0-9]/,
-                    length: 10
-                }, 
-                {
-                    name: 'symbols',
-                    re: /[^a-zA-Z0-9]/, //  !"#$%&'()*+,-./:;<=>?@[\]^_`{|}~ (and any other)
-                    length: 33
-                }
-            ];
+            this.strengthFactors = {
+                'minLowercase'  : this.minLowercase,
+                'minUppercase'  : this.minUppercase,
+                'minIntegers'   : this.minIntegers,
+                'minSymbols'    : this.minSymbols,
+                'minLength'     : this.minLength,
+            };
         }
 
         static get observedAttributes() {
@@ -124,11 +109,11 @@
 
         /**
          * Create a HTMLElement
-         * @param string tagName - e.g. div, strong, span etc.
-         * @param object attr - element attribute object
-         * @param string innerHTML - text to elements innerHTML
+         * @param {string} tagName      - e.g. div, strong, span etc.
+         * @param {object} attr         - element attribute object
+         * @param {string} innerHTML    - text to elements innerHTML
          * 
-         * @return HTMLElement
+         * @return {HTMLElement}
          */
         createDOMElement =  (tagName, attr = {}, innerHTML = '') => {
             tagName     = typeof(tagName)   === 'string' && tagName.length > 0 ? tagName : false;
@@ -160,44 +145,83 @@
         }
 
         /** 
-         * empty a specific element
-         * @param HTMLElement - element
+         * clear all children of a specific element
          * 
-         * @return void
+         * @param {HTMLElement} - element
+         * 
+         * @return {void}
          */
-        emptyDom = (element) => {
+        clearChildren = (element) => {
             while(element.firstChild) {
                 element.removeChild(element.firstChild);
             }
         }
 
-        /** Translation method to perform translateuage string */
+        /** 
+         * Translation method to perform Joomla.JText._() API
+         * 
+         * @param {string} str  - language string
+         * @return {string}     - translated string
+         */
         translate = (str) => {
             return Joomla.JText._(str) || str;
         }
 
         /**
-         * Password strength calculator 
-         * This script has been taken from https://github.com/autonomoussoftware/fast-password-entropy
-         * This provides much acurate result then the script provided by Joomla
+         * Password strength calculator
          * 
+         * @param {string} value - password string
+         * @return {integer}     - get strength value
          */
-        calcEntropy = (charset, length) => Math.round(length * Math.log(charset) / Math.LN2);
-        calcCharsetLengthWith = charsets => string => charsets.reduce((length, charset) => length + (charset.re.test(string) ? charset.length : 0), 0);
-        getScore = string => string ? this.calcEntropy(this.calcCharsetLengthWith(this.stdCharsets)(string), string.length) : 0;
+        getScore = (value) => {
+            let score = 0, mods = 0;
+			const sets = ['minLowercase', 'minUppercase', 'minIntegers', 'minSymbols', 'minLength'];
+			for (let i = 0, l = sets.length; l>i; i++) {
+				if (this.strengthFactors.hasOwnProperty(sets[i]) && this[sets[i]] > 0) {
+					mods = mods + 1;
+				}
+            }
 
+            score += this.calc(value, /[a-z]/g, this.minLowercase, mods);
+            score += this.calc(value, /[A-Z]/g, this.minUppercase, mods);
+            score += this.calc(value, /[0-9]/g, this.minIntegers, mods);
+            score += this.calc(value, /[\$\!\#\?\=\;\:\*\-\_\€\%\&\(\)\`\´]/g, this.minSymbols, mods);
+
+            if (mods == 1) {
+                score += value.length > this.minLength ? 100 : 100 / this.minLength * value.length;
+            } else {
+                score += value.length > this.minLength ? (100 / mods) : (100 / mods) / this.minLength * value.length;
+            }
+
+            return score;
+        }
+
+        /**
+         * Calculate the length according to the patterns
+         * 
+         * @param {string} value    - password string
+         * @param {regExp} pattern  - regular expression
+         * @param {integer} length  - user provided parameter i.e. how many characters, numbers, uppercase etc.
+         * @param {integer} mods    - calculated mods
+         * 
+         * @return {integer}        - calculated length
+         */
+        calc = (value, pattern, length, mods) => {
+            let count;
+            count = value.match(pattern);
+            if (count && count.length > length && length != 0) {
+                return 100 / mods;
+            }
+            if (count && length > 0) {
+                return (100 / mods) / length * count.length;
+            } else {
+                return 0;
+            }
+        }
 
         /** lifecycle callback for web component */
         connectedCallback() {
-            // strength factors
-            this.strengthFactors = {
-                'minLowercase'  : this.minLowercase,
-                'minUppercase'  : this.minUppercase,
-                'minIntegers'   : this.minIntegers,
-                'minSymbols'    : this.minSymbols,
-                'minLength'     : this.minLength,
-            };
-
+            
             // attach password wrapper
             this.elementContainers();
             
@@ -240,8 +264,9 @@
 
         /**
          * Create password group wrapper
-         * this will create password-group, input-group, strength-indicator-container
+         * this will create password-group, input-group, strength-indicator-container etc
          * 
+         * @return {void}
          */
         elementContainers = () => {
             this.passwordGroup = this.createDOMElement('div', {class: 'password-group'});
@@ -265,6 +290,9 @@
         /**
          * Create password input field
          * 
+         * @param {string} type - field type text/password
+         * 
+         * @return {void}
          */
         createPasswordField = (type) => {
             // make input field's attribute 
@@ -314,7 +342,7 @@
             }
 
             if (this.inputContainer) {
-                this.emptyDom(this.inputContainer);
+                this.clearChildren(this.inputContainer);
             }
 
             // create input field
@@ -336,6 +364,8 @@
         /**
          * Password and text type field toggler button
          * 
+         * @param {string} type - field type text/password
+         * @return {void}
          */
         createTogglerElement = (type) => {
             //create toggle button
@@ -350,8 +380,9 @@
 
         
         /**
-         * Create strength-indicators and indicator text element
+         * Create strength-indicators
          * 
+         * @return {void}
          */
         createStrengthIndicators = () => {
             if (this.strengthMeter) {
@@ -367,7 +398,10 @@
         
         /**
          * toggle input type i.e. password to text event handler
-         *  
+         * 
+         *  @param {event} event - click event
+         * 
+         * @return {void}
          */
         handleToggleFieldType = (event) => {
             event.preventDefault();
@@ -387,8 +421,9 @@
          * this will add very-weak, weak, good, great, strong modifier
          * according to score value
          * 
-         * @param INT level 
+         * @param {integer} level - password strength level
          * 
+         * @return {void}
          */
         manageIndicatorClasses(level) {
             const modifierClasses = ['very-weak', 'weak', 'good', 'great', 'strong'];
@@ -410,8 +445,10 @@
 
 
         /**
-         * indicator text management
+         * Update indicators according to score change
          * 
+         * @param {integer} score - strength score value
+         * @return {void}
          */
         updateIndicators = (score) => {
             // if score less than 41 then very weak password
@@ -448,7 +485,9 @@
 
         /**
          * input field change event handler
-         * @param event
+         * @param {event} event - keyup event
+         * 
+         * @return {void}
          */
         handleInputFieldChangeEvent = (event) => {
             event.preventDefault();
@@ -456,8 +495,6 @@
             let {value} = event.target;
             this.inputValue = value;
             this.inputField.value = value;
-
-            console.log(this.inputField);
             
             value = typeof value == 'string' && value.length > 0 ? value : false;
             

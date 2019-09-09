@@ -47,7 +47,7 @@ extract($displayData);
  * @var   string   $accept          File types that are accepted.
  */
 
-HTMLHelper::_('script', 'system/fields/joomla-field-password-es6.js', array('version' => 'auto', 'relative' => true));
+HTMLHelper::_('script', 'system/fields/joomla-field-password.es6.js', array('version' => 'auto', 'relative' => true));
 
 Text::script('JFIELD_PASSWORD_INDICATE_INCOMPLETE');
 Text::script('JFIELD_PASSWORD_INDICATE_COMPLETE');

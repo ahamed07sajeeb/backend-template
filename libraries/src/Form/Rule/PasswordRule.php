@@ -53,7 +53,7 @@ class PasswordRule extends FormRule
 		$minimumSymbols   = isset($element['minSymbols']) ? (int) $element['minSymbols'] : 0;
 		$minimumUppercase = isset($element['minUppercase']) ? (int) $element['minUppercase'] : 0;
 		$minimumLowercase = isset($element['minLowercase']) ? (int) $element['minLowercase'] : 0;
-
+		
 		// If we have parameters from com_users, use those instead.
 		// Some of these may be empty for legacy reasons.
 		$params = ComponentHelper::getParams('com_users');
